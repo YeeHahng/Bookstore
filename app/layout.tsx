@@ -4,6 +4,7 @@ import "./globals.css";
 import ConfigureAmplify from "@/utils/configure";
 import { CartProvider } from "@/app/context/CartContext";
 import CartIcon from "@/components/CartIcon";
+import Logout from "@/components/Logout";
 
 export const metadata: Metadata = {
   title: "Bookstore",
@@ -28,6 +29,7 @@ export default function RootLayout({
                   <li><a href="/" className="hover:underline">Home</a></li>
                   <li><a href="/books" className="hover:underline">Books</a></li>
                   <li><CartIcon /></li>
+                  <li><Logout /></li>
                 </ul>
               </nav>
             </div>

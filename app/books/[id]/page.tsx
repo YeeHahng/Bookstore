@@ -5,7 +5,6 @@ import React, { useEffect, useState } from 'react';
 import { getBookById, Book } from '@/lib/api';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Logout from '@/components/Logout';
 import { useCart } from '@/app/context/CartContext';
 import Link from 'next/link';
 
@@ -95,9 +94,6 @@ export default function BookDetail() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-end mb-4">
-        <Logout />
-      </div>
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/3">
           <div className="relative h-80 w-full border border-gray-200 bg-gray-100">

@@ -11,7 +11,7 @@ function Logout() {
             await signOut();
             router.push('/signup')
         }}
-        className="px-2 bg-white text-black">
+        className="hover:underline">
             Signout
         </button>
     )

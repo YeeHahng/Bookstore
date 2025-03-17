@@ -5,7 +5,6 @@ import React from 'react';
 import { useCart } from '@/app/context/CartContext';
 import Image from 'next/image';
 import Link from 'next/link';
-import Logout from '@/components/Logout';
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
@@ -13,9 +12,6 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="container mx-auto p-4">
-        <div className="flex justify-end mb-4">
-          <Logout />
-        </div>
         <div className="text-center py-10">
           <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
           <p className="mb-6">Looks like you haven't added any books to your cart yet.</p>
@@ -29,9 +25,8 @@ export default function CartPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Your Cart</h1>
-        <Logout />
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">

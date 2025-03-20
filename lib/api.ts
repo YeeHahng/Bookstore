@@ -113,3 +113,54 @@ export async function getBookById(id: string): Promise<Book | null> {
     return null;
   }
 }
+
+// New function for searching books
+export async function searchBooks(query: string): Promise<Book[]> {
+  try {
+    // Encode the query parameter to make it URL-safe
+    const encodedQuery = encodeURIComponent(query);
+    console.log(`Searching books with query: ${query}`);
+    
+    // Call the search endpoint of your API
+    const response = await fetch(`${API_URL}/books/search?q=${encodedQuery}`);
+    
+    if (!response.ok) {
+      console.error(`Failed to search books: ${response.status} ${response.statusText}`);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log("Search API response:", data);
+    
+    let books: Book[];
+    
+    // Handle different response formats (similar to getBooks)
+    if (data.body && typeof data.body === 'string') {
+      try {
+        books = JSON.parse(data.body);
+      } catch (parseError) {
+        console.error("Error parsing search response body:", parseError);
+        return [];
+      }
+    } else if (Array.isArray(data)) {
+      books = data;
+    } else {
+      console.error("Unexpected data format from search:", data);
+      return [];
+    }
+    
+    // Validate and sanitize each book
+    return books.map(book => ({
+      id: book.id || '',
+      title: book.title || 'Untitled Book',
+      author: book.author || 'Unknown Author',
+      description: book.description || 'No description available.',
+      price: typeof book.price === 'number' ? book.price : 0,
+      imageUrl: book.imageUrl || '',
+      category: book.category || 'Uncategorized'
+    }));
+  } catch (error) {
+    console.error('Error searching books:', error);
+    return [];
+  }
+}

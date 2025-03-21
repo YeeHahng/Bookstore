@@ -14,151 +14,144 @@ export interface Book {
 // Replace this URL with your actual API Gateway URL from AWS
 const API_URL = 'https://3mbrdg00ck.execute-api.us-east-1.amazonaws.com/prod';
 
-export async function getBooks(): Promise<Book[]> {
+// Common function to handle API requests with proper error handling
+async function fetchFromAPI(endpoint: string, options = {}): Promise<any> {
   try {
-    console.log("Fetching books from:", `${API_URL}/books`);
-    const response = await fetch(`${API_URL}/books`);
+    // Default request headers including the API key
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.NEXT_PUBLIC_API_KEY || ''
+    };
+
+    // Merge default options with provided options
+    const requestOptions = {
+      ...options,
+      headers: {
+        ...headers,
+        ...(options as any).headers
+      }
+    };
+
+    console.log(`Fetching from: ${API_URL}${endpoint}`);
+    const response = await fetch(`${API_URL}${endpoint}`, requestOptions);
     
     if (!response.ok) {
-      console.error(`Failed to fetch books: ${response.status} ${response.statusText}`);
-      return [];
+      const errorText = await response.text();
+      console.error(`API error (${response.status}): ${errorText}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log("Raw API response:", data);
     
-    let books: Book[];
+    return data;
+  } catch (error) {
+    console.error(`Error in API request to ${endpoint}:`, error);
+    throw error;
+  }
+}
+
+// Function to sanitize and validate book data
+function sanitizeBook(book: any): Book {
+  return {
+    id: book.id || '',
+    title: book.title || 'Untitled Book',
+    author: book.author || 'Unknown Author',
+    description: book.description || 'No description available.',
+    price: typeof book.price === 'number' ? book.price : 0,
+    imageUrl: book.imageUrl || '',
+    category: book.category || 'Uncategorized'
+  };
+}
+
+// Get all books
+export async function getBooks(): Promise<Book[]> {
+  try {
+    let data = await fetchFromAPI('/books');
     
     // Handle different response formats
     if (data.body && typeof data.body === 'string') {
-      // If the response has the full API Gateway format
       try {
-        books = JSON.parse(data.body);
+        data = JSON.parse(data.body);
       } catch (parseError) {
         console.error("Error parsing response body:", parseError);
         return [];
       }
-    } else if (Array.isArray(data)) {
-      // If the response is already an array
-      books = data;
-    } else {
-      // Unexpected format
+    } else if (!Array.isArray(data)) {
       console.error("Unexpected data format:", data);
       return [];
     }
     
-    // Validate and sanitize each book
-    return books.map(book => ({
-      id: book.id || '',
-      title: book.title || 'Untitled Book',
-      author: book.author || 'Unknown Author',
-      description: book.description || 'No description available.',
-      price: typeof book.price === 'number' ? book.price : 0,
-      imageUrl: book.imageUrl || '',
-      category: book.category || 'Uncategorized'
-    }));
+    // Sanitize each book
+    return data.map(sanitizeBook);
   } catch (error) {
     console.error('Error fetching books:', error);
     return [];
   }
 }
 
+// Get a book by ID
 export async function getBookById(id: string): Promise<Book | null> {
+  if (!id) {
+    console.error('Invalid book ID provided');
+    return null;
+  }
+  
   try {
-    console.log(`Fetching book with ID: ${id}`);
-    const response = await fetch(`${API_URL}/books/${id}`);
-    
-    if (!response.ok) {
-      console.error(`Failed to fetch book: ${response.status} ${response.statusText}`);
-      return null;
-    }
-    
-    const data = await response.json();
-    console.log(`Raw API response for book ${id}:`, data);
+    let data = await fetchFromAPI(`/books/${id}`);
     
     // Handle different response formats
-    let book: Book;
-    
     if (data.body && typeof data.body === 'string') {
-      // If the response has the full API Gateway format
       try {
-        book = JSON.parse(data.body);
+        data = JSON.parse(data.body);
       } catch (parseError) {
         console.error("Error parsing response body:", parseError);
         return null;
       }
-    } else {
-      // If it's already the book object
-      book = data;
     }
     
     // Validate the book data
-    if (!book || !book.id) {
-      console.error('Invalid book data received:', book);
+    if (!data || !data.id) {
+      console.error('Invalid book data received:', data);
       return null;
     }
     
-    // Sanitize book data to prevent frontend errors
-    return {
-      id: book.id,
-      title: book.title || 'Untitled Book',
-      author: book.author || 'Unknown Author',
-      description: book.description || 'No description available.',
-      price: typeof book.price === 'number' ? book.price : 0,
-      imageUrl: book.imageUrl || '',
-      category: book.category || 'Uncategorized'
-    };
+    // Return sanitized book
+    return sanitizeBook(data);
   } catch (error) {
     console.error(`Error fetching book ${id}:`, error);
     return null;
   }
 }
 
-// New function for searching books
+// Search for books
 export async function searchBooks(query: string): Promise<Book[]> {
+  if (!query || typeof query !== 'string') {
+    console.error('Invalid search query:', query);
+    return [];
+  }
+  
   try {
     // Encode the query parameter to make it URL-safe
     const encodedQuery = encodeURIComponent(query);
     console.log(`Searching books with query: ${query}`);
     
-    // Call the search endpoint of your API
-    const response = await fetch(`${API_URL}/books/search?q=${encodedQuery}`);
+    let data = await fetchFromAPI(`/books/search?q=${encodedQuery}`);
     
-    if (!response.ok) {
-      console.error(`Failed to search books: ${response.status} ${response.statusText}`);
-      return [];
-    }
-    
-    const data = await response.json();
-    console.log("Search API response:", data);
-    
-    let books: Book[];
-    
-    // Handle different response formats (similar to getBooks)
+    // Handle different response formats
     if (data.body && typeof data.body === 'string') {
       try {
-        books = JSON.parse(data.body);
+        data = JSON.parse(data.body);
       } catch (parseError) {
         console.error("Error parsing search response body:", parseError);
         return [];
       }
-    } else if (Array.isArray(data)) {
-      books = data;
-    } else {
+    } else if (!Array.isArray(data)) {
       console.error("Unexpected data format from search:", data);
       return [];
     }
     
-    // Validate and sanitize each book
-    return books.map(book => ({
-      id: book.id || '',
-      title: book.title || 'Untitled Book',
-      author: book.author || 'Unknown Author',
-      description: book.description || 'No description available.',
-      price: typeof book.price === 'number' ? book.price : 0,
-      imageUrl: book.imageUrl || '',
-      category: book.category || 'Uncategorized'
-    }));
+    // Return sanitized books
+    return data.map(sanitizeBook);
   } catch (error) {
     console.error('Error searching books:', error);
     return [];

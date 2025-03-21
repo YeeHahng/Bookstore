@@ -1,12 +1,14 @@
 // app/checkout/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/app/context/CartContext';
 import { useRouter } from 'next/navigation';
+import { createCheckoutSession } from '@/lib/stripe';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 export default function CheckoutPage() {
-  const { items, cartTotal, clearCart } = useCart();
+  const { items, cartTotal } = useCart();
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
@@ -17,9 +19,34 @@ export default function CheckoutPage() {
     state: '',
     zipCode: ''
   });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  // Get current user's email
+  useEffect(() => {
+    async function fetchUserEmail() {
+      try {
+        const user = await getCurrentUser();
+        if (user && user.signInDetails && user.signInDetails.loginId) {
+          const email = user.signInDetails.loginId;
+          setUserEmail(email);
+          // Ensure email is not undefined
+          setFormData(prev => ({ 
+            ...prev, 
+            email: email || prev.email 
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    }
+    
+    fetchUserEmail();
+  }, []);
 
   // Redirect if cart is empty
-  React.useEffect(() => {
+  useEffect(() => {
     if (items.length === 0) {
       router.push('/cart');
     }
@@ -30,13 +57,36 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the order to your backend
-    // For now, we'll just show an alert and clear the cart
-    alert('Order placed successfully! We will redirect to payment processing.');
-    // Implement payment processing with Stripe here
-    // clearCart(); // Uncomment this when payment is successful
+    setIsProcessing(true);
+    setErrorMessage(null);
+    
+    try {
+      // Input validation
+      if (!formData.email) {
+        throw new Error('Email is required');
+      }
+      
+      if (!formData.name || !formData.address || !formData.city || 
+          !formData.state || !formData.zipCode) {
+        throw new Error('All shipping information fields are required');
+      }
+      
+      // Process payment with Stripe
+      const result = await createCheckoutSession(items, formData.email);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Payment processing failed');
+      }
+      
+      // Note: The redirect to Stripe's checkout page is handled in the createCheckoutSession function
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      setErrorMessage(error.message || 'An error occurred during checkout');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (items.length === 0) {
@@ -48,6 +98,12 @@ export default function CheckoutPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Checkout</h1>
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p>{errorMessage}</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -85,6 +141,7 @@ export default function CheckoutPage() {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                disabled={isProcessing}
               />
             </div>
             
@@ -101,6 +158,7 @@ export default function CheckoutPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={isProcessing || !!userEmail}
               />
             </div>
             
@@ -117,6 +175,7 @@ export default function CheckoutPage() {
                 value={formData.phone}
                 onChange={handleChange}
                 required
+                disabled={isProcessing}
               />
             </div>
             
@@ -132,6 +191,7 @@ export default function CheckoutPage() {
                 value={formData.address}
                 onChange={handleChange}
                 required
+                disabled={isProcessing}
               />
             </div>
             
@@ -149,6 +209,7 @@ export default function CheckoutPage() {
                   value={formData.city}
                   onChange={handleChange}
                   required
+                  disabled={isProcessing}
                 />
               </div>
               <div>
@@ -164,6 +225,7 @@ export default function CheckoutPage() {
                   value={formData.state}
                   onChange={handleChange}
                   required
+                  disabled={isProcessing}
                 />
               </div>
             </div>
@@ -181,18 +243,24 @@ export default function CheckoutPage() {
                 value={formData.zipCode}
                 onChange={handleChange}
                 required
+                disabled={isProcessing}
               />
             </div>
             
             <div className="mt-6">
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700"
+                className={`w-full py-2 rounded font-bold ${
+                  isProcessing 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                disabled={isProcessing}
               >
-                Continue to Payment
+                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
               </button>
               <p className="text-gray-600 text-sm mt-2 text-center">
-                Payment integration with Stripe will follow in the next step
+                Secure payment processing by Stripe
               </p>
             </div>
           </form>

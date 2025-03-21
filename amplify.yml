@@ -3,11 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
+        - echo "$AMPLIFY_CONFIG" > amplify_outputs.json
         - npm ci
     build:
       commands:
-        - echo "Checking for amplify_outputs.json"
-        - ls -la
         - npm run build
   artifacts:
     baseDirectory: .next
@@ -16,3 +15,4 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+      - .next/cache/**/*

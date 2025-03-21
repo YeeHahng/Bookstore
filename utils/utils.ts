@@ -7,14 +7,14 @@ export const { runWithAmplifyServerContext } = createServerRunner ({
     config: outputs 
 })
 
-export async function GetAuthCurrentUserServer(){
-    try{
-        const currentUser = await runWithAmplifyServerContext({
-            nextServerContext: {cookies},
-            operation: (context) => getCurrentUser(context)
-        })
-        return currentUser
-    }catch(err){
-        console.log(err)
-    }
-}
+// export async function GetAuthCurrentUserServer(){
+//     try{
+//         const currentUser = await runWithAmplifyServerContext({
+//             nextServerContext: {cookies},
+//             operation: (context) => getCurrentUser(context)
+//         })
+//         return currentUser
+//     }catch(err){
+//         console.log(err)
+//     }
+// }

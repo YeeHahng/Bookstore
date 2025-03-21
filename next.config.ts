@@ -10,14 +10,11 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Skip type checking during builds for faster builds
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Set these pages to be dynamically rendered instead of statically generated
-  experimental: {
-    missingSuspenseWithCSRBailout: false
-  }
+  // Turn off static generation completely
+  output: 'standalone'
 };
 
 export default nextConfig;

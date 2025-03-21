@@ -1,16 +1,13 @@
 version: 1
-backend:
-  phases:
-    build:
-      commands:
-        - echo "No backend build needed - already deployed"
 frontend:
   phases:
     preBuild:
       commands:
         - npm ci
+        - npm install -g @aws-amplify/cli
     build:
       commands:
+        - npx amplify generate outputs
         - npm run build
   artifacts:
     baseDirectory: .next

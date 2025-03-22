@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Book } from '@/lib/api';
 import Link from 'next/link';
@@ -8,7 +8,17 @@ import Image from 'next/image';
 import { useCart } from '@/app/context/CartContext';
 import { searchBooks } from '@/lib/api';
 
-export default function SearchPage() {
+// Loading component
+function SearchLoading() {
+  return (
+    <div className="container mx-auto p-4">
+      <div className="text-center py-8">Searching books...</div>
+    </div>
+  );
+}
+
+// SearchContent component that uses searchParams
+function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [books, setBooks] = useState<Book[]>([]);
@@ -62,13 +72,15 @@ export default function SearchPage() {
     }, 2000);
   };
 
+  if (loading) {
+    return <SearchLoading />;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">
         {query ? `Search Results for "${query}"` : 'Search Books'}
       </h1>
-
-      {loading && <div className="text-center py-8">Searching books...</div>}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded mb-6">
@@ -132,5 +144,14 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main page component with Suspense
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchLoading />}>
+      <SearchContent />
+    </Suspense>
   );
 }

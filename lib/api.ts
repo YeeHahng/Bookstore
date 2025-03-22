@@ -1,5 +1,4 @@
 // lib/api.ts
-
 // Define the Book interface
 export interface Book {
   id: string;
@@ -32,12 +31,10 @@ async function fetchFromAPI(endpoint: string, options = {}): Promise<any> {
       }
     };
 
-    console.log(`Fetching from: ${API_URL}${endpoint}`);
     const response = await fetch(`${API_URL}${endpoint}`, requestOptions);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`API error (${response.status}): ${errorText}`);
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
@@ -57,7 +54,8 @@ function sanitizeBook(book: any): Book {
     title: book.title || 'Untitled Book',
     author: book.author || 'Unknown Author',
     description: book.description || 'No description available.',
-    price: typeof book.price === 'number' ? book.price : 0,
+    price: typeof book.price === 'number' ? book.price : 
+           typeof book.price === 'string' ? parseFloat(book.price) || 0 : 0,
     imageUrl: book.imageUrl || '',
     category: book.category || 'Uncategorized'
   };
@@ -133,14 +131,16 @@ export async function searchBooks(query: string): Promise<Book[]> {
   try {
     // Encode the query parameter to make it URL-safe
     const encodedQuery = encodeURIComponent(query);
-    console.log(`Searching books with query: ${query}`);
     
+    // Call the search endpoint of your API
     let data = await fetchFromAPI(`/books/search?q=${encodedQuery}`);
     
-    // Handle different response formats
+    // Handle wrapped response format (the Lambda response structure)
     if (data.body && typeof data.body === 'string') {
       try {
-        data = JSON.parse(data.body);
+        // Parse the stringified JSON in the body
+        const parsed = JSON.parse(data.body);
+        data = parsed;
       } catch (parseError) {
         console.error("Error parsing search response body:", parseError);
         return [];
@@ -150,7 +150,13 @@ export async function searchBooks(query: string): Promise<Book[]> {
       return [];
     }
     
-    // Return sanitized books
+    // Validate and sanitize the results
+    if (!Array.isArray(data)) {
+      console.error("Data is not an array after parsing:", data);
+      return [];
+    }
+    
+    // Process and return the books
     return data.map(sanitizeBook);
   } catch (error) {
     console.error('Error searching books:', error);

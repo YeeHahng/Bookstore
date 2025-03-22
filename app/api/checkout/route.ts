@@ -1,6 +1,8 @@
 // app/api/checkout/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { validateCSRFToken } from '@/utils/csrf';
+import { cookies } from 'next/headers';
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -11,7 +13,21 @@ export async function POST(request: NextRequest) {
   try {
     // Parse the request body
     const body = await request.json();
-    const { items, customerEmail } = body;
+    const { items, customerEmail, csrfToken } = body;
+    
+    // Validate CSRF token if provided
+    if (csrfToken) {
+      // Get cookies with await since it's a Promise
+      const cookieStore = await cookies();
+      const storedToken = cookieStore.get('csrfToken')?.value;
+      
+      if (!storedToken || !validateCSRFToken(csrfToken, storedToken)) {
+        return NextResponse.json(
+          { error: 'Invalid request token' },
+          { status: 403 }
+        );
+      }
+    }
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -27,8 +43,6 @@ export async function POST(request: NextRequest) {
         product_data: {
           name: item.title,
           description: item.author ? `By ${item.author}` : undefined,
-          // Don't use direct S3 URLs which require authentication
-          // images: item.imageUrl ? [item.imageUrl] : undefined,
         },
         unit_amount: Math.round(item.price * 100), // Convert to cents
       },

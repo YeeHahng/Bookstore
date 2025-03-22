@@ -5,10 +5,16 @@ import { CartItem } from '@/app/context/CartContext';
  * Initiates the checkout process with Stripe
  * @param items The items in the cart
  * @param email Customer email
+ * @param csrfToken CSRF protection token (optional)
  * @returns The Stripe checkout URL
  */
-export async function createCheckoutSession(items: CartItem[], email: string) {
+export async function createCheckoutSession(items: CartItem[], email: string, csrfToken?: string) {
   try {
+    // Set CSRF token as a cookie if provided
+    if (csrfToken) {
+      document.cookie = `csrfToken=${csrfToken}; path=/; SameSite=Strict; secure`;
+    }
+    
     // Call our API endpoint
     const response = await fetch('/api/checkout', {
       method: 'POST',
@@ -17,7 +23,9 @@ export async function createCheckoutSession(items: CartItem[], email: string) {
       },
       body: JSON.stringify({ 
         items, 
-        customerEmail: email 
+        customerEmail: email,
+        // Only include csrfToken if it was provided
+        ...(csrfToken ? { csrfToken } : {})
       }),
     });
 
@@ -53,6 +61,9 @@ export async function validateCheckoutSession(sessionId: string) {
   try {
     const response = await fetch(`/api/checkout/validate?session_id=${sessionId}`, {
       method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
 
     if (!response.ok) {

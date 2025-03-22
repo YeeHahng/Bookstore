@@ -1,4 +1,3 @@
-// app/checkout/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,6 +5,7 @@ import { useCart } from '@/app/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { createCheckoutSession } from '@/lib/stripe';
 import { getCurrentUser } from 'aws-amplify/auth';
+import { generateCSRFToken } from '@/utils/csrf';
 
 export default function CheckoutPage() {
   const { items, cartTotal } = useCart();
@@ -22,6 +22,12 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [csrfToken, setCsrfToken] = useState<string>('');
+
+  // Generate CSRF token on component mount
+  useEffect(() => {
+    setCsrfToken(generateCSRFToken());
+  }, []);
 
   // Get current user's email
   useEffect(() => {
@@ -31,7 +37,6 @@ export default function CheckoutPage() {
         if (user && user.signInDetails && user.signInDetails.loginId) {
           const email = user.signInDetails.loginId;
           setUserEmail(email);
-          // Ensure email is not undefined
           setFormData(prev => ({ 
             ...prev, 
             email: email || prev.email 
@@ -54,7 +59,9 @@ export default function CheckoutPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // Sanitize input - basic example, add more as needed
+    const sanitizedValue = value.replace(/<[^>]*>?/gm, '');
+    setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,8 +80,8 @@ export default function CheckoutPage() {
         throw new Error('All shipping information fields are required');
       }
       
-      // Process payment with Stripe
-      const result = await createCheckoutSession(items, formData.email);
+      // Process payment with Stripe, including CSRF token
+      const result = await createCheckoutSession(items, formData.email, csrfToken);
       
       if (!result.success) {
         throw new Error(result.error || 'Payment processing failed');
@@ -128,6 +135,9 @@ export default function CheckoutPage() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold mb-4 text-black">Shipping Information</h2>
           <form onSubmit={handleSubmit}>
+            {/* Hidden CSRF token field */}
+            <input type="hidden" name="csrfToken" value={csrfToken} />
+            
             <div className="mb-4">
               <label className="block text-black text-sm font-bold mb-2" htmlFor="name">
                 Full Name

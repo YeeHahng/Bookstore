@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { sanitizeSearchQuery } from '@/utils/sanitize';
 
 export default function SearchBar() {
   const [query, setQuery] = useState('');
@@ -11,10 +12,10 @@ export default function SearchBar() {
     e.preventDefault();
     
     // Sanitize input to prevent XSS
-    const sanitizedQuery = encodeURIComponent(query.trim());
+    const sanitizedQuery = sanitizeSearchQuery(query);
     
     if (sanitizedQuery) {
-      router.push(`/search?q=${sanitizedQuery}`);
+      router.push(`/search?q=${encodeURIComponent(sanitizedQuery)}`);
     }
   };
 
@@ -27,6 +28,9 @@ export default function SearchBar() {
         placeholder="Search books..."
         className="w-full py-1 px-3 text-black rounded-md text-sm"
         aria-label="Search books"
+        maxLength={100} // Add client-side length limit
+        pattern="[A-Za-z0-9\s.\'-]+" // Restrict input pattern
+        title="Search terms may only contain letters, numbers, spaces, and basic punctuation"
       />
       <button 
         type="submit"

@@ -1,4 +1,4 @@
-// context/CartContext.tsx
+// app/context/CartContext.tsx
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -135,8 +135,8 @@ export function CartProvider({ children }: CartProviderProps) {
   );
 }
 
-// Custom hook to use the cart context
-export function useCart(): CartContextType {
+// Custom hook to use the cart context - MAKE SURE THIS IS EXPORTED!
+export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {
     throw new Error('useCart must be used within a CartProvider');

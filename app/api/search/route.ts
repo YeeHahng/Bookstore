@@ -19,9 +19,22 @@ export async function GET(request: NextRequest) {
   const sanitizedQuery = query.trim().replace(/[^\w\s.'-]/g, '');
   
   try {
+    console.log(`Searching books with query: ${sanitizedQuery}`);
+    
     // Call your Lambda function via the API
     const results = await searchBooks(sanitizedQuery);
-    return NextResponse.json(results);
+    
+    // Ensure prices are properly processed for frontend
+    const processedResults = results.map(book => ({
+      ...book,
+      // Ensure price is a number
+      price: typeof book.price === 'number' ? book.price : 
+             typeof book.price === 'string' ? parseFloat(book.price) || 0 : 0
+    }));
+    
+    console.log('Search results processed:', processedResults.length);
+    
+    return NextResponse.json(processedResults);
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json(

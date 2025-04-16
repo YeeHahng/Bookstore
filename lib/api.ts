@@ -71,7 +71,8 @@ export async function getBooks(): Promise<Book[]> {
       try {
         data = JSON.parse(data.body);
       } catch (parseError) {
-        console.error("Error parsing response body:", parseError);
+        const typedError = parseError as Error;
+        console.error("Error parsing response body:", typedError);
         return [];
       }
     } else if (!Array.isArray(data)) {
@@ -102,7 +103,8 @@ export async function getBookById(id: string): Promise<Book | null> {
       try {
         data = JSON.parse(data.body);
       } catch (parseError) {
-        console.error("Error parsing response body:", parseError);
+        const typedError = parseError as Error;
+        console.error("Error parsing response body:", typedError);
         return null;
       }
     }
@@ -121,45 +123,133 @@ export async function getBookById(id: string): Promise<Book | null> {
   }
 }
 
+// Helper function for the fallback search (to avoid code duplication)
+async function performFallbackSearch(query: string): Promise<Book[]> {
+  console.log("Performing fallback search");
+  try {
+    const allBooks = await getBooks();
+    return allBooks.filter(book => 
+      book.title.toLowerCase().includes(query.toLowerCase()) || 
+      book.author.toLowerCase().includes(query.toLowerCase()) ||
+      (book.category && book.category.toLowerCase().includes(query.toLowerCase()))
+    );
+  } catch (error) {
+    console.error("Error in fallback search:", error);
+    return [];
+  }
+}
+
 // Search for books
 export async function searchBooks(query: string): Promise<Book[]> {
   if (!query || typeof query !== 'string') {
-    console.error('Invalid search query:', query);
     return [];
   }
   
   try {
-    // Encode the query parameter to make it URL-safe
     const encodedQuery = encodeURIComponent(query);
     
-    // Call the search endpoint of your API
-    let data = await fetchFromAPI(`/books/search?q=${encodedQuery}`);
+    // Log the request for debugging
+    console.log(`Searching for books with query: ${encodedQuery}`);
     
-    // Handle wrapped response format (the Lambda response structure)
-    if (data.body && typeof data.body === 'string') {
-      try {
-        // Parse the stringified JSON in the body
-        const parsed = JSON.parse(data.body);
-        data = parsed;
-      } catch (parseError) {
-        console.error("Error parsing search response body:", parseError);
+    try {
+      const response = await fetch(`${API_URL}/books/search?q=${encodedQuery}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || ''
+        }
+      });
+      
+      // Log the status
+      console.log(`Search API response status: ${response.status}`);
+      
+      // Get the raw text before parsing as JSON
+      const rawText = await response.text();
+      
+      // Log the exact raw response for debugging
+      console.log(`Raw API response (first 100 chars): "${rawText.substring(0, 100)}..."`);
+      console.log(`Raw response length: ${rawText.length}`);
+      
+      // Check if the response is empty or whitespace
+      if (!rawText || rawText.trim() === '') {
+        console.log("Empty response received, returning empty array");
         return [];
       }
-    } else if (!Array.isArray(data)) {
-      console.error("Unexpected data format from search:", data);
-      return [];
+      
+      // Try multiple parsing strategies
+      let data;
+      let parseSuccess = false;
+      
+      // Strategy 1: Direct JSON parse
+      try {
+        data = JSON.parse(rawText);
+        console.log("Strategy 1 (direct parse) succeeded");
+        parseSuccess = true;
+      } catch (error1) {
+        console.log("Strategy 1 failed:", (error1 as Error).message);
+        
+        // Strategy 2: Try parsing with handling Lambda response format
+        try {
+          // Check if it starts with {"statusCode": ...
+          if (rawText.trim().startsWith('{"statusCode":')) {
+            const lambdaResponse = JSON.parse(rawText);
+            console.log("Parsed Lambda response:", Object.keys(lambdaResponse));
+            
+            if (lambdaResponse.body && typeof lambdaResponse.body === 'string') {
+              data = JSON.parse(lambdaResponse.body);
+              console.log("Strategy 2 (Lambda response) succeeded");
+              parseSuccess = true;
+            }
+          }
+        } catch (error2) {
+          console.log("Strategy 2 failed:", (error2 as Error).message);
+          
+          // Strategy 3: Try with bracket fixing (API Gateway sometimes adds brackets)
+          try {
+            if (rawText.trim().startsWith('[{') || rawText.trim().startsWith('{[')) {
+              // Clean the string by removing potential extra brackets
+              const cleaned = rawText.replace(/^\[+|\]+$/g, '');
+              data = JSON.parse(`[${cleaned}]`);
+              console.log("Strategy 3 (bracket fixing) succeeded");
+              parseSuccess = true;
+            }
+          } catch (error3) {
+            console.log("Strategy 3 failed:", (error3 as Error).message);
+          }
+        }
+      }
+      
+      // If all strategies failed, use fallback
+      if (!parseSuccess) {
+        console.log("All parsing strategies failed, using fallback search");
+        return await performFallbackSearch(query);
+      }
+      
+      // If data is not an array at this point, try to handle special cases
+      if (!Array.isArray(data)) {
+        console.log("Parsed data is not an array:", typeof data);
+        
+        // If it's an object with key-value pairs that look like array indices
+        if (typeof data === 'object' && data !== null) {
+          const values = Object.values(data);
+          if (values.length > 0) {
+            console.log("Converting object to array");
+            data = values;
+          }
+        } else {
+          console.log("Cannot convert to array, using fallback");
+          return await performFallbackSearch(query);
+        }
+      }
+      
+      console.log(`Successfully parsed ${data.length} books`);
+      return data.map(sanitizeBook);
+      
+    } catch (fetchError) {
+      console.error("Error fetching search results:", fetchError);
+      return await performFallbackSearch(query);
     }
-    
-    // Validate and sanitize the results
-    if (!Array.isArray(data)) {
-      console.error("Data is not an array after parsing:", data);
-      return [];
-    }
-    
-    // Process and return the books
-    return data.map(sanitizeBook);
-  } catch (error) {
-    console.error('Error searching books:', error);
+  } catch (generalError) {
+    console.error("Unexpected error in searchBooks:", generalError);
     return [];
   }
 }

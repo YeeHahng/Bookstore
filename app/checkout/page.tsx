@@ -1,11 +1,12 @@
+// app/checkout/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/app/context/CartContext';
 import { useRouter } from 'next/navigation';
-import { createCheckoutSession } from '@/lib/stripe';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { generateCSRFToken } from '@/utils/csrf';
+import PaymentForm from '@/components/PaymentForm';
 
 export default function CheckoutPage() {
   const { items, cartTotal } = useCart();
@@ -23,10 +24,18 @@ export default function CheckoutPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [csrfToken, setCsrfToken] = useState<string>('');
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   // Generate CSRF token on component mount
   useEffect(() => {
-    setCsrfToken(generateCSRFToken());
+    const token = generateCSRFToken();
+    setCsrfToken(token);
+    
+    // Set the token as a cookie immediately
+    document.cookie = `csrfToken=${token}; path=/; SameSite=Strict; secure`;
+    
+    console.log('CSRF token set:', token);
+    console.log('Current cookies:', document.cookie);
   }, []);
 
   // Get current user's email
@@ -64,36 +73,20 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
     setErrorMessage(null);
     
-    try {
-      // Input validation
-      if (!formData.email) {
-        throw new Error('Email is required');
-      }
-      
-      if (!formData.name || !formData.address || !formData.city || 
-          !formData.state || !formData.zipCode) {
-        throw new Error('All shipping information fields are required');
-      }
-      
-      // Process payment with Stripe, including CSRF token
-      const result = await createCheckoutSession(items, formData.email, csrfToken);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Payment processing failed');
-      }
-      
-      // Note: The redirect to Stripe's checkout page is handled in the createCheckoutSession function
-    } catch (error: any) {
-      console.error('Checkout error:', error);
-      setErrorMessage(error.message || 'An error occurred during checkout');
-    } finally {
-      setIsProcessing(false);
+    // Validate shipping information
+    if (!formData.name || !formData.email || !formData.phone || 
+        !formData.address || !formData.city || !formData.state || 
+        !formData.zipCode) {
+      setErrorMessage('All shipping information fields are required');
+      return;
     }
+    
+    // Show payment form if shipping info is valid
+    setShowPaymentForm(true);
   };
 
   if (items.length === 0) {
@@ -132,149 +125,150 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4 text-black">Shipping Information</h2>
-          <form onSubmit={handleSubmit}>
-            {/* Hidden CSRF token field */}
-            <input type="hidden" name="csrfToken" value={csrfToken} />
-            
-            <div className="mb-4">
-              <label className="block text-black text-sm font-bold mb-2" htmlFor="name">
-                Full Name
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                id="name"
-                name="name"
-                type="text"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                disabled={isProcessing}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-black text-sm font-bold mb-2" htmlFor="email">
-                Email
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                id="email"
-                name="email"
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={isProcessing || !!userEmail}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-black text-sm font-bold mb-2" htmlFor="phone">
-                Phone
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="Phone Number"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                disabled={isProcessing}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-black text-sm font-bold mb-2" htmlFor="address">
-                Address
-              </label>
-              <textarea
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                id="address"
-                name="address"
-                placeholder="Address"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                disabled={isProcessing}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-black text-sm font-bold mb-2" htmlFor="city">
-                  City
+        {!showPaymentForm ? (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold mb-4 text-black">Shipping Information</h2>
+            <form onSubmit={handleSubmit}>
+              {/* Hidden CSRF token field */}
+              <input type="hidden" name="csrfToken" value={csrfToken} />
+              
+              <div className="mb-4">
+                <label className="block text-black text-sm font-bold mb-2" htmlFor="name">
+                  Full Name
                 </label>
                 <input
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                  id="city"
-                  name="city"
+                  id="name"
+                  name="name"
                   type="text"
-                  placeholder="City"
-                  value={formData.city}
+                  placeholder="Full Name"
+                  value={formData.name}
                   onChange={handleChange}
                   required
                   disabled={isProcessing}
                 />
               </div>
-              <div>
-                <label className="block text-black text-sm font-bold mb-2" htmlFor="state">
-                  State
+              
+              <div className="mb-4">
+                <label className="block text-black text-sm font-bold mb-2" htmlFor="email">
+                  Email
                 </label>
                 <input
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                  id="state"
-                  name="state"
-                  type="text"
-                  placeholder="State"
-                  value={formData.state}
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  disabled={isProcessing || !!userEmail}
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-black text-sm font-bold mb-2" htmlFor="phone">
+                  Phone
+                </label>
+                <input
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={formData.phone}
                   onChange={handleChange}
                   required
                   disabled={isProcessing}
                 />
               </div>
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-black text-sm font-bold mb-2" htmlFor="zipCode">
-                Zip Code
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-                id="zipCode"
-                name="zipCode"
-                type="text"
-                placeholder="Zip Code"
-                value={formData.zipCode}
-                onChange={handleChange}
-                required
-                disabled={isProcessing}
-              />
-            </div>
-            
-            <div className="mt-6">
-              <button
-                type="submit"
-                className={`w-full py-2 rounded font-bold ${
-                  isProcessing 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
-              </button>
-              <p className="text-gray-600 text-sm mt-2 text-center">
-                Secure payment processing by Stripe
-              </p>
-            </div>
-          </form>
-        </div>
+              
+              <div className="mb-4">
+                <label className="block text-black text-sm font-bold mb-2" htmlFor="address">
+                  Address
+                </label>
+                <textarea
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+                  id="address"
+                  name="address"
+                  placeholder="Address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  required
+                  disabled={isProcessing}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-black text-sm font-bold mb-2" htmlFor="city">
+                    City
+                  </label>
+                  <input
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+                    id="city"
+                    name="city"
+                    type="text"
+                    placeholder="City"
+                    value={formData.city}
+                    onChange={handleChange}
+                    required
+                    disabled={isProcessing}
+                  />
+                </div>
+                <div>
+                  <label className="block text-black text-sm font-bold mb-2" htmlFor="state">
+                    State
+                  </label>
+                  <input
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+                    id="state"
+                    name="state"
+                    type="text"
+                    placeholder="State"
+                    value={formData.state}
+                    onChange={handleChange}
+                    required
+                    disabled={isProcessing}
+                  />
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-black text-sm font-bold mb-2" htmlFor="zipCode">
+                  Zip Code
+                </label>
+                <input
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+                  id="zipCode"
+                  name="zipCode"
+                  type="text"
+                  placeholder="Zip Code"
+                  value={formData.zipCode}
+                  onChange={handleChange}
+                  required
+                  disabled={isProcessing}
+                />
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  type="submit"
+                  className="w-full py-2 rounded font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Continue to Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <PaymentForm
+            totalAmount={cartTotal}
+            customerInfo={formData}
+            items={items}
+            csrfToken={csrfToken}
+          />
+        )}
       </div>
     </div>
   );

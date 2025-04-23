@@ -19,7 +19,7 @@ async function fetchFromAPI(endpoint: string, options = {}): Promise<any> {
     // Default request headers including the API key
     const headers = {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.NEXT_PUBLIC_API_KEY || ''
+      'x-api-key': process.env.API_KEY || ''
     };
 
     // Merge default options with provided options
@@ -155,7 +155,7 @@ export async function searchBooks(query: string): Promise<Book[]> {
       const response = await fetch(`${API_URL}/books/search?q=${encodedQuery}`, {
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || ''
+          'x-api-key': process.env.API_KEY || ''
         }
       });
       

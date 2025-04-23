@@ -1,3 +1,4 @@
+// utils/csrf.ts
 import crypto from 'crypto';
 
 /**
@@ -16,9 +17,12 @@ export function validateCSRFToken(token: string, expectedToken: string): boolean
   
   // Simple constant-time comparison
   let valid = true;
-  if (token.length !== expectedToken.length) return false;
+  const tokenLength = token.length;
+  const expectedLength = expectedToken.length;
   
-  for (let i = 0; i < token.length; i++) {
+  if (tokenLength !== expectedLength) return false;
+  
+  for (let i = 0; i < tokenLength; i++) {
     valid = valid && (token[i] === expectedToken[i]);
   }
   

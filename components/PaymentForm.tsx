@@ -27,11 +27,19 @@ export default function PaymentForm({
   csrfToken
 }: PaymentFormProps) {
   const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardholderName, setCardholderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    cardNumber?: string;
+    month?: string;
+    year?: string;
+    cvv?: string;
+    cardholderName?: string;
+  }>({});
   
   const router = useRouter();
   
@@ -53,46 +61,127 @@ export default function PaymentForm({
     }
   };
   
-  // Format expiry date as MM/YY
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+  // Handle month input (01-12 only)
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
     
-    if (v.length >= 2) {
-      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
+    if (value === '') {
+      setMonth('');
+      return;
     }
     
-    return v;
+    // Restrict to 2 digits
+    const monthValue = value.substring(0, 2);
+    
+    // If user typed a value > 1, format it properly
+    if (monthValue.length === 1 && parseInt(monthValue) > 1) {
+      setMonth(`0${monthValue}`);
+    } 
+    // If first digit is 1, only allow 0-2 as second digit
+    else if (monthValue.length === 2 && monthValue[0] === '1' && parseInt(monthValue[1]) > 2) {
+      setMonth('12');
+    } 
+    // If first digit is 0, don't allow 0 as second digit
+    else if (monthValue.length === 2 && monthValue[0] === '0' && monthValue[1] === '0') {
+      setMonth('01');
+    }
+    else {
+      setMonth(monthValue);
+    }
+
+    // Clear any error
+    if (fieldErrors.month) {
+      setFieldErrors(prev => ({ ...prev, month: undefined }));
+    }
+  };
+  
+  // Handle year input (2 digits only)
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    
+    // Restrict to 2 digits
+    const yearValue = value.substring(0, 2);
+    setYear(yearValue);
+    
+    // Clear any error
+    if (fieldErrors.year) {
+      setFieldErrors(prev => ({ ...prev, year: undefined }));
+    }
+  };
+  
+  // Handle CVV input (3 digits only)
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    
+    // Restrict to 3 digits
+    const cvvValue = value.substring(0, 3);
+    setCvv(cvvValue);
+    
+    // Clear any error
+    if (fieldErrors.cvv) {
+      setFieldErrors(prev => ({ ...prev, cvv: undefined }));
+    }
+  };
+  
+  const validateForm = () => {
+    const errors: {
+      cardNumber?: string;
+      month?: string;
+      year?: string;
+      cvv?: string;
+      cardholderName?: string;
+    } = {};
+    
+    // Validate card number (16 digits)
+    if (cardNumber.replace(/\s+/g, '').length !== 16) {
+      errors.cardNumber = 'Card number must be 16 digits';
+    }
+    
+    // Validate month (01-12)
+    if (!month) {
+      errors.month = 'Required';
+    } else if (!(parseInt(month) >= 1 && parseInt(month) <= 12)) {
+      errors.month = 'Invalid month';
+    }
+    
+    // Validate year (must be 2 digits)
+    if (!year) {
+      errors.year = 'Required';
+    } else if (year.length !== 2) {
+      errors.year = 'Must be 2 digits';
+    }
+    
+    // Validate CVV (3 digits)
+    if (!cvv) {
+      errors.cvv = 'Required';
+    } else if (cvv.length !== 3) {
+      errors.cvv = 'Must be 3 digits';
+    }
+    
+    // Validate cardholder name
+    if (!cardholderName.trim()) {
+      errors.cardholderName = 'Cardholder name is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
+    
+    // Reset error state
     setError(null);
     
-    // Basic client-side validation
-    if (cardNumber.replace(/\s+/g, '').length < 16) {
-      setError('Please enter a valid card number');
-      setIsProcessing(false);
+    // Validate form
+    if (!validateForm()) {
       return;
     }
     
-    if (expiryDate.length < 5) {
-      setError('Please enter a valid expiry date');
-      setIsProcessing(false);
-      return;
-    }
+    setIsProcessing(true);
     
-    if (cvv.length < 3) {
-      setError('Please enter a valid CVV');
-      setIsProcessing(false);
-      return;
-    }
-    
-    if (cardholderName.trim().length < 3) {
-      setError('Please enter the cardholder name');
-      setIsProcessing(false);
-      return;
-    }
+    // Format expiry date for submission
+    const expiryDate = `${month}/${year}`;
     
     try {
       console.log('Submitting payment with CSRF token:', csrfToken);
@@ -155,16 +244,24 @@ export default function PaymentForm({
             Card Number
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+            className={`shadow appearance-none border rounded w-full py-2 px-3 text-black ${fieldErrors.cardNumber ? 'border-red-500' : ''}`}
             id="cardNumber"
             type="text"
             placeholder="1234 5678 9012 3456"
             value={cardNumber}
-            onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+            onChange={(e) => {
+              setCardNumber(formatCardNumber(e.target.value));
+              if (fieldErrors.cardNumber) {
+                setFieldErrors(prev => ({ ...prev, cardNumber: undefined }));
+              }
+            }}
             maxLength={19}
             required
             disabled={isProcessing}
           />
+          {fieldErrors.cardNumber && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.cardNumber}</p>
+          )}
         </div>
         
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -172,33 +269,60 @@ export default function PaymentForm({
             <label className="block text-black text-sm font-bold mb-2" htmlFor="expiryDate">
               Expiry Date
             </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
-              id="expiryDate"
-              type="text"
-              placeholder="MM/YY"
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-              maxLength={5}
-              required
-              disabled={isProcessing}
-            />
+            <div className="flex space-x-2">
+              <div className="w-1/2">
+                <input
+                  className={`shadow appearance-none border rounded w-full py-2 px-3 text-black ${fieldErrors.month ? 'border-red-500' : ''}`}
+                  id="expiryMonth"
+                  type="text"
+                  placeholder="MM"
+                  value={month}
+                  onChange={handleMonthChange}
+                  maxLength={2}
+                  required
+                  disabled={isProcessing}
+                />
+                {fieldErrors.month && (
+                  <p className="text-red-500 text-xs mt-1">{fieldErrors.month}</p>
+                )}
+              </div>
+              <span className="self-center text-gray-500">/</span>
+              <div className="w-1/2">
+                <input
+                  className={`shadow appearance-none border rounded w-full py-2 px-3 text-black ${fieldErrors.year ? 'border-red-500' : ''}`}
+                  id="expiryYear"
+                  type="text"
+                  placeholder="YY"
+                  value={year}
+                  onChange={handleYearChange}
+                  maxLength={2}
+                  required
+                  disabled={isProcessing}
+                />
+                {fieldErrors.year && (
+                  <p className="text-red-500 text-xs mt-1">{fieldErrors.year}</p>
+                )}
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-black text-sm font-bold mb-2" htmlFor="cvv">
               CVV
             </label>
             <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+              className={`shadow appearance-none border rounded w-full py-2 px-3 text-black ${fieldErrors.cvv ? 'border-red-500' : ''}`}
               id="cvv"
               type="text"
               placeholder="123"
               value={cvv}
-              onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-              maxLength={4}
+              onChange={handleCvvChange}
+              maxLength={3}
               required
               disabled={isProcessing}
             />
+            {fieldErrors.cvv && (
+              <p className="text-red-500 text-xs mt-1">{fieldErrors.cvv}</p>
+            )}
           </div>
         </div>
         
@@ -207,15 +331,23 @@ export default function PaymentForm({
             Cardholder Name
           </label>
           <input
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-black"
+            className={`shadow appearance-none border rounded w-full py-2 px-3 text-black ${fieldErrors.cardholderName ? 'border-red-500' : ''}`}
             id="cardholderName"
             type="text"
             placeholder="John Doe"
             value={cardholderName}
-            onChange={(e) => setCardholderName(e.target.value)}
+            onChange={(e) => {
+              setCardholderName(e.target.value);
+              if (fieldErrors.cardholderName) {
+                setFieldErrors(prev => ({ ...prev, cardholderName: undefined }));
+              }
+            }}
             required
             disabled={isProcessing}
           />
+          {fieldErrors.cardholderName && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.cardholderName}</p>
+          )}
         </div>
         
         {error && (

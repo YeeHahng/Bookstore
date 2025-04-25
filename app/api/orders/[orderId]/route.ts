@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: { orderId?: string } }
 ) {
   try {
-    const orderId = params.orderId;
+    // Access URL params through the URL itself to avoid the synchronous params issue
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split('/');
+    const orderId = pathSegments[pathSegments.length - 1]; // Get the last segment
     
     if (!orderId) {
       return NextResponse.json(

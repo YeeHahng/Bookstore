@@ -1,7 +1,7 @@
 // app/checkout/success/page.tsx
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/app/context/CartContext';
 import Link from 'next/link';
@@ -13,8 +13,18 @@ function CheckoutSuccessContent() {
   const { clearCart } = useCart();
   const [orderStatus, setOrderStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [orderDetails, setOrderDetails] = useState<any>(null);
+  const fetchExecuted = useRef(false);
   
   useEffect(() => {
+    // If no order_id found, redirect to home
+    if (!searchParams.get('order_id')) {
+      router.push('/');
+      return;
+    }
+    
+    // Prevent multiple fetches
+    if (fetchExecuted.current) return;
+    
     async function fetchOrderDetails() {
       // Get the order ID from URL
       const orderId = searchParams.get('order_id');
@@ -39,21 +49,18 @@ function CheckoutSuccessContent() {
         
         // Clear the cart as the order was successful
         clearCart();
+        
+        // Mark fetch as completed
+        fetchExecuted.current = true;
       } catch (error) {
         console.error('Error fetching order details:', error);
         setOrderStatus('error');
+        fetchExecuted.current = true;
       }
     }
     
     fetchOrderDetails();
-  }, [searchParams, clearCart]);
-  
-  // If no order_id found, redirect to home
-  useEffect(() => {
-    if (!searchParams.get('order_id')) {
-      router.push('/');
-    }
-  }, [searchParams, router]);
+  }, [searchParams, router, clearCart]);
   
   if (orderStatus === 'loading') {
     return (

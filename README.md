@@ -1,37 +1,45 @@
-NextJS Bookstore with AWS Amplify
+# NextJS Bookstore with AWS Amplify
+
 A full-featured online bookstore built with Next.js, AWS Amplify, and Stripe for payments. This application demonstrates a complete e-commerce solution with authentication, product catalog, shopping cart, checkout process, and order management.
-Features
 
-🔐 User authentication with AWS Amplify
-📚 Book catalog with search functionality
-🛒 Shopping cart with local storage persistence
-💳 Secure checkout process using Stripe
-📱 Responsive design with Tailwind CSS
-🔒 Security features (CSRF protection, input sanitization)
-🌐 API Gateway integration for backend services
+## Features
 
-Prerequisites
+- 🔐 User authentication with AWS Amplify
+- 📚 Book catalog with search functionality
+- 🛒 Shopping cart with local storage persistence
+- 💳 Secure checkout process using Stripe
+- 📱 Responsive design with Tailwind CSS
+- 🔒 Security features (CSRF protection, input sanitization)
+- 🌐 API Gateway integration for backend services
 
-Node.js 18.x or higher
-npm 9.x or higher
-AWS account (for Amplify services)
-Stripe account (for payment processing)
+## Prerequisites
 
-Installation
+- Node.js 18.x or higher
+- npm 9.x or higher
+- AWS account (for Amplify services)
+- Stripe account (for payment processing)
 
-Clone the repository:
+## Installation
 
-bashgit clone <repository-url>
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
 cd bookstore
+```
 
-Install dependencies:
+2. Install dependencies:
 
-bashnpm install
+```bash
+npm install
+```
 
-Set up environment variables:
+3. Set up environment variables:
 
-Create a .env file in the root directory with the following variables:
-bash# Stripe API Keys
+Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Stripe API Keys
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
@@ -41,72 +49,98 @@ API_KEY=your_api_key
 
 # Base URL for your application
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
 
-Initialize AWS Amplify:
+4. Initialize AWS Amplify:
 
-bashnpm install -g @aws-amplify/cli
+```bash
+npm install -g @aws-amplify/cli
 amplify init
+```
+
 Follow the prompts to configure your Amplify project.
 
-Add Amplify authentication:
+5. Add Amplify authentication:
 
-bashamplify add auth
+```bash
+amplify add auth
+```
+
 Choose the default configuration or customize as needed.
 
-Push Amplify changes to AWS:
+6. Push Amplify changes to AWS:
 
-bashamplify push
-This will create the necessary AWS resources and generate the amplify_outputs.json file.
-Running the Application
-Development Mode
-bashnpm run dev
-The application will be available at http://localhost:3000.
-Production Build
-bashnpm run build
+```bash
+amplify push
+```
+
+This will create the necessary AWS resources and generate the `amplify_outputs.json` file.
+
+## Running the Application
+
+### Development Mode
+
+```bash
+npm run dev
+```
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### Production Build
+
+```bash
+npm run build
 npm start
-Deployment with AWS Amplify
+```
 
-Connect your repository to AWS Amplify:
+## Deployment with AWS Amplify
 
-bashamplify add hosting
+1. Connect your repository to AWS Amplify:
 
-Deploy the application:
+```bash
+amplify add hosting
+```
 
-bashamplify publish
-Project Structure
+2. Deploy the application:
 
-app/: Next.js app directory with page routes and API routes
+```bash
+amplify publish
+```
 
-api/: API endpoints for checkout, search, and order management
-books/: Book listing and detail pages
-cart/: Shopping cart page
-checkout/: Checkout and order confirmation pages
-context/: React context providers (CartContext)
+## Project Structure
 
+- `app/`: Next.js app directory with page routes and API routes
+  - `api/`: API endpoints for checkout, search, and order management
+  - `books/`: Book listing and detail pages
+  - `cart/`: Shopping cart page
+  - `checkout/`: Checkout and order confirmation pages
+  - `context/`: React context providers (CartContext)
+- `components/`: Reusable React components
+- `lib/`: API client and utilities
+- `public/`: Static assets
+- `utils/`: Utility functions for CSRF protection, sanitization, etc.
+- `amplify/`: AWS Amplify configuration and resources
 
-components/: Reusable React components
-lib/: API client and utilities
-public/: Static assets
-utils/: Utility functions for CSRF protection, sanitization, etc.
-amplify/: AWS Amplify configuration and resources
+## Security Features
 
-Security Features
+- CSRF token protection for form submissions
+- Input sanitization for user inputs
+- Content Security Policy headers
+- HTTPS-only cookies
+- Rate limiting protection
 
-CSRF token protection for form submissions
-Input sanitization for user inputs
-Content Security Policy headers
-HTTPS-only cookies
-Rate limiting protection
+## AWS Services Used
 
-AWS Services Used
+- AWS Amplify for authentication and hosting
+- API Gateway for backend APIs
+- Lambda functions for serverless backend
+- DynamoDB for order storage
+- S3 for book images
 
-AWS Amplify for authentication and hosting
-API Gateway for backend APIs
-Lambda functions for serverless backend
-DynamoDB for order storage
-S3 for book images
+## Contributing
 
-Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
-License
+
+## License
+
 This project is licensed under the MIT License - see the LICENSE file for details.

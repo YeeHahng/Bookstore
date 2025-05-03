@@ -24,7 +24,7 @@ export default function RootLayout({
         <CartProvider>
           <header className="bg-blue-600 text-white p-4">
             <div className="container mx-auto flex justify-between items-center">
-              <h1 className="text-2xl font-bold">My Bookstore</h1>
+              <h1 className="text-2xl font-bold">Cloudshelf</h1>
               <div className="flex items-center flex-1 justify-end">
                 <SearchBar />
                 <nav className="flex items-center">

@@ -12,14 +12,14 @@ A full-featured online bookstore built with Next.js, AWS Amplify, and Stripe for
 - 🔒 Security features (CSRF protection, input sanitization)
 - 🌐 API Gateway integration for backend services
 
-## Prerequisites
+## Setup Instructions
+
+### Prerequisites
 
 - Node.js 18.x or higher
 - npm 9.x or higher
-- AWS account (for Amplify services)
-- Stripe account (for payment processing)
 
-## Installation
+### Installation Steps
 
 1. Clone the repository:
 
@@ -34,34 +34,15 @@ cd bookstore
 npm install
 ```
 
-3. Initialize AWS Amplify:
+3. Copy your `amplify_outputs.json` file to the root directory:
+   - This file contains your AWS Amplify configuration
+   - It should be generated from your AWS Amplify console setup
 
-```bash
-npm install -g @aws-amplify/cli
-amplify init
-```
 
-Follow the prompts to configure your Amplify project.
 
-4. Add Amplify authentication:
+### Running the Application
 
-```bash
-amplify add auth
-```
-
-Choose the default configuration or customize as needed.
-
-5. Push Amplify changes to AWS:
-
-```bash
-amplify push
-```
-
-This will create the necessary AWS resources and generate the `amplify_outputs.json` file.
-
-## Running the Application
-
-### Development Mode
+#### Development Mode
 
 ```bash
 npm run dev
@@ -69,25 +50,11 @@ npm run dev
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
-### Production Build
+#### Production Build
 
 ```bash
 npm run build
 npm start
-```
-
-## Deployment with AWS Amplify
-
-1. Connect your repository to AWS Amplify:
-
-```bash
-amplify add hosting
-```
-
-2. Deploy the application:
-
-```bash
-amplify publish
 ```
 
 ## Project Structure
@@ -104,6 +71,12 @@ amplify publish
 - `utils/`: Utility functions for CSRF protection, sanitization, etc.
 - `amplify/`: AWS Amplify configuration and resources
 
+## Troubleshooting
+
+- If you encounter authentication issues, verify AWS Amplify is correctly configured
+- For API errors, check your network configuration and make sure API Gateway is accessible
+- For payment issues, ensure Stripe integration is properly set up
+
 ## Security Features
 
 - CSRF token protection for form submissions
@@ -111,18 +84,6 @@ amplify publish
 - Content Security Policy headers
 - HTTPS-only cookies
 - Rate limiting protection
-
-## AWS Services Used
-
-- AWS Amplify for authentication and hosting
-- API Gateway for backend APIs
-- Lambda functions for serverless backend
-- DynamoDB for order storage
-- S3 for book images
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 

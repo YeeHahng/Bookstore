@@ -34,24 +34,7 @@ cd bookstore
 npm install
 ```
 
-3. Set up environment variables:
-
-Create a `.env` file in the root directory with the following variables:
-
-```bash
-# Stripe API Keys
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-
-# API Gateway
-API_GATEWAY_URL=https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/prod
-API_KEY=your_api_key
-
-# Base URL for your application
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
-```
-
-4. Initialize AWS Amplify:
+3. Initialize AWS Amplify:
 
 ```bash
 npm install -g @aws-amplify/cli
@@ -60,7 +43,7 @@ amplify init
 
 Follow the prompts to configure your Amplify project.
 
-5. Add Amplify authentication:
+4. Add Amplify authentication:
 
 ```bash
 amplify add auth
@@ -68,7 +51,7 @@ amplify add auth
 
 Choose the default configuration or customize as needed.
 
-6. Push Amplify changes to AWS:
+5. Push Amplify changes to AWS:
 
 ```bash
 amplify push

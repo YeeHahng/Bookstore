@@ -1,4 +1,4 @@
-# NextJS Bookstore with AWS Amplify
+# Cloudshelf
 
 A full-featured online bookstore built with Next.js, AWS Amplify, and Stripe for payments. This application demonstrates a complete e-commerce solution with authentication, product catalog, shopping cart, checkout process, and order management.
 
@@ -70,12 +70,6 @@ npm start
 - `public/`: Static assets
 - `utils/`: Utility functions for CSRF protection, sanitization, etc.
 - `amplify/`: AWS Amplify configuration and resources
-
-## Troubleshooting
-
-- If you encounter authentication issues, verify AWS Amplify is correctly configured
-- For API errors, check your network configuration and make sure API Gateway is accessible
-- For payment issues, ensure Stripe integration is properly set up
 
 ## Security Features
 
